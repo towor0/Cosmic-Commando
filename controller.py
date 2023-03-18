@@ -37,14 +37,16 @@ class GameController:
         self.gameSurf = pygame.Surface((320, 240)).convert_alpha()
         self.consoleSurf = pygame.Surface((640, 480)).convert_alpha()
         self.guiSurf = pygame.Surface((640, 480)).convert_alpha()
-        self.camera = Camera()
+        self.camera = Camera(self.map.playerSpawn)
         self.console = Console()
         f = open("gameConsoleLog.txt", "w")
         f.close()
         pygame.mixer.music.play(-1)
+        pygame.mixer.music.set_volume(0.25)
 
     def update_events(self, events):
         events["console"] = self.console.active
+        events["playerRect"] = self.player.rect
         return events
 
     def execute(self):
@@ -65,6 +67,8 @@ class GameController:
                     code = code[:code.find(codeName)-1] + str(r) + code[code.find(codeName) + len(codeName)+1:]
                 code = code[:code.find("Objects")] + "self.map.interactables"+ code[code.find("Objects")+7:]
         try:
+            f = open("gameConsoleLog.txt", "w")
+            f.close()
             exec(code)
             with open("gameConsoleLog.txt", "r") as f:
                 feedback = f.read().split("\n")
@@ -91,8 +95,8 @@ class GameController:
         self.gameSurf.fill((0, 0, 0, 0))
         self.consoleSurf.fill((0, 0, 0, 0))
         self.guiSurf.fill((0, 0, 0, 0))
-        self.player.draw(self.gameSurf, self.camera.rect)
         self.map.draw(self.gameSurf, self.camera.rect, self.guiSurf)
+        self.player.draw(self.gameSurf, self.camera.rect)
         self.console.draw(self.consoleSurf)
         window.blit(pygame.transform.scale(self.gameSurf, (640, 480)), (0, 0))
         window.blit(self.guiSurf, (0, 0))

@@ -1,7 +1,7 @@
 {
   "Player": {
     "x": 0,
-    "y": 0
+    "y": 76
   },
   "Chunks": [
     {
@@ -11,7 +11,7 @@
       "col": 5
     },
     {
-      "x": 300,
+      "x": 500,
       "y": 100,
       "row": 10,
       "col": 5
@@ -27,10 +27,12 @@
     ],
     "Gliders": [
       {
-        "name": "P1",
+        "name": "P2",
         "x": 190,
         "y": 100,
-        "type": "horizontal"
+        "type": "horizontal",
+        "dest": 262,
+        "direction": true
       }
     ]
   },

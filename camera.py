@@ -4,10 +4,11 @@ import random
 
 # tracks player's y position and adjust the camera position accordingly
 class Camera:
-    def __init__(self):
+    def __init__(self, pos):
         self.rect = pygame.Rect(0, 0, 320, 240)
-        self.targety = 0
-        self.targetx = 0
+        self.rect.center = pos
+        self.targety = pos.x
+        self.targetx = pos.y
         self.shaketime = 0
 
     def shake(self, time):

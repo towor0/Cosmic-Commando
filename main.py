@@ -5,6 +5,8 @@ import os
 
 from controller import Controller
 
+
+
 # initialize pygame
 pygame.init()
 # change application name
@@ -38,7 +40,8 @@ while running:
         "events": pygame.event.get(),
         "keys": pygame.key.get_pressed(),
         "console": False,
-        "mouse": pygame.mouse
+        "mouse": pygame.mouse,
+        "playerRect": pygame.Rect(0, 0, 12, 24)
     }
     for event in events["events"]:
         if event.type == pygame.QUIT:

@@ -13,7 +13,7 @@ def collision_test(rect, tiles):
 class Player:
     def __init__(self, pos):
         self.pos = pos
-        self.rect = pygame.Rect(0, 0, 12, 24)
+        self.rect = pygame.Rect(pos.x, pos.y, 12, 24)
         self.sprites = {
             "right": [
                 pygame.image.load(os.path.join("assets", "player_right0.png")).convert_alpha(),
@@ -49,6 +49,14 @@ class Player:
         interactables = gameObjects["interactables"]
         allObjects = gameMap + interactables
         vel = pygame.Vector2(0, 0)
+        # check gliders
+        for interactable in interactables:
+            if interactable.__class__.__name__ == "Glider":
+                if interactable.binded:
+                    if interactable.direction:
+                        vel.x += interactable.speed * dt
+                    else:
+                        vel.x -= interactable.speed * dt
         # events management
         if not events["console"]:
             if events["keys"][pygame.K_a] and events["keys"][pygame.K_d]:

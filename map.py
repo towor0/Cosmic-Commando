@@ -11,6 +11,7 @@ class Map:
         self.mousepos = pygame.Vector2(0, 0)
         self.raw = ""
         self.playerSpawn = pygame.Vector2()
+        self.ship = None
 
     def update(self, dt, events):
         self.mousepos = pygame.Vector2(events["mouse"].get_pos()[0], events["mouse"].get_pos()[1])
@@ -48,13 +49,17 @@ class Map:
         for name in self.raw["Interactables"].keys():
             for item in self.raw["Interactables"][name]:
                 if name == "Pilars":
-                    self.interactables.append(Pilar(pygame.Vector2(item["x"], item["y"]), item["name"]))
+                    self.interactables.append(Pilar(item))
+                elif name == "Gliders":
+                    self.interactables.append(Glider(item))
+        self.ship = Ship(self.playerSpawn)
 
     def draw(self, window, camera, labelSurf):
         for block in self.map:
             block.draw(window, camera)
         for interactable in self.interactables:
             interactable.draw(window, camera, self.mousepos, labelSurf)
+        self.ship.draw(window, camera, self.mousepos, labelSurf)
 
 
 class Block:
@@ -82,10 +87,10 @@ class Interactable:
 
 
 class Pilar(Interactable):
-    def __init__(self, pos, codename):
-        Interactable.__init__(self, codename)
-        self.pos = pos
-        self.rect = pygame.Rect(pos.x, pos.y, 16, 96)
+    def __init__(self, item):
+        Interactable.__init__(self, item["name"])
+        self.pos = pygame.Vector2(item["x"], item["y"])
+        self.rect = pygame.Rect(self.pos.x, self.pos.y, 16, 96)
         self.sprite = pygame.image.load(os.path.join("assets", "interactables", "pilar.png")).convert_alpha()
         self.label = False
         labelFont = pygame.font.SysFont("arial", 10)
@@ -108,10 +113,15 @@ class Pilar(Interactable):
 
     def update(self, dt, events):
         if self.moving:
+            detect = pygame.Rect(0, 0, self.rect.width, events["playerRect"].height)
             if self.direction:
-                self.pos.y += self.speed * dt
+                detect.topleft = self.rect.bottomleft
+                if not detect.colliderect(events["playerRect"]):
+                    self.pos.y += self.speed * dt
             else:
-                self.pos.y -= self.speed * dt
+                detect.bottomleft = self.rect.topleft
+                if not detect.colliderect(events["playerRect"]):
+                    self.pos.y -= self.speed * dt
             if (self.direction and self.pos.y > self.targety) or \
                     (not self.direction and self.pos.y < self.targety):
                 self.moving = False
@@ -120,8 +130,7 @@ class Pilar(Interactable):
         self.rect.y = self.pos.y
 
     def draw(self, window, camera, mousepos, labelSurf):
-        if self.collision:
-            window.blit(self.sprite, (self.rect.x - camera.x, self.rect.y - camera.y))
+        window.blit(self.sprite, (self.rect.x - camera.x, self.rect.y - camera.y))
         screenRect = pygame.Rect(self.rect.x - camera.x, self.rect.y - camera.y, self.rect.width, self.rect.height)
         if screenRect.collidepoint(mousepos / 2):
             labelSurf.blit(self.renderedText, self.renderedText.get_rect(bottomright=mousepos))
@@ -129,3 +138,97 @@ class Pilar(Interactable):
     def help(self):
         printConsole("""This object can move up or down.
 .activate(): will activate the pilar and move in a direction that have space.""")
+
+
+class Glider(Interactable):
+    def __init__(self, item):
+        Interactable.__init__(self, item["name"])
+        self.pos = pygame.Vector2(item["x"], item["y"])
+        self.rect = pygame.Rect(self.pos.x, self.pos.y, 48, 16)
+        self.sprite = pygame.image.load(os.path.join("assets", "interactables", "glider.png")).convert_alpha()
+        self.label = False
+        self.type = item["type"]
+        labelFont = pygame.font.SysFont("arial", 10)
+        self.renderedText = labelFont.render(self.codeName, True, (255, 255, 255))
+        self.moving = False
+        self.direction = item["direction"]
+        self.dest = item["dest"]
+        self.targetpos = 0
+        self.speed = 1
+        self.binded = False
+
+    def activate(self):
+        if not self.moving:
+            self.moving = True
+            if self.type == "horizontal":
+                if self.direction:
+                    self.targetpos = self.pos.x + self.dest
+                else:
+                    self.targetpos = self.pos.x - self.dest
+            elif self.type == "vertical":
+                if self.direction:
+                    self.targetpos = self.pos.y + self.dest
+                else:
+                    self.targetpos = self.pos.y - self.dest
+            printConsole("Activating...")
+            return 0
+        printConsole("Unable to activate.")
+
+    def update(self, dt, events):
+        self.binded = False
+        if self.moving:
+            if self.type == "vertical":
+                detect = pygame.Rect(0, 0, self.rect.width, events["playerRect"].height)
+                if self.direction:
+                    detect.topleft = self.rect.bottomleft
+                    if not detect.colliderect(events["playerRect"]):
+                        self.pos.y += self.speed * dt
+                else:
+                    self.pos.y -= self.speed * dt
+            elif self.type == "horizontal":
+                detect = pygame.Rect(0, 0, events["playerRect"].width, self.rect.height)
+                bindRect = pygame.Rect(0, 0, self.rect.width, 3)
+                bindRect.bottomleft = self.rect.topleft
+                if self.direction:
+                    detect.topleft = self.rect.topright
+                    if not detect.colliderect(events["playerRect"]):
+                        self.pos.x += self.speed * dt
+                        if bindRect.colliderect(events["playerRect"]):
+                            self.binded = True
+                else:
+                    detect.topright = self.rect.topleft
+                    if not detect.colliderect(events["playerRect"]):
+                        self.pos.x -= self.speed * dt
+                        if bindRect.colliderect(events["playerRect"]):
+                            self.binded = True
+            if (self.type == "vertical" and ((self.direction and self.pos.y > self.targetpos) or
+                                             (not self.direction and self.pos.y < self.targetpos))) or (
+                    self.type == "horizontal" and ((self.direction and self.pos.x > self.targetpos) or
+                                                   (not self.direction and self.pos.x < self.targetpos))):
+                self.moving = False
+                self.direction = not self.direction
+        self.rect.x = self.pos.x
+        self.rect.y = self.pos.y
+
+    def draw(self, window, camera, mousepos, labelSurf):
+        window.blit(self.sprite, (self.rect.x - camera.x, self.rect.y - camera.y))
+        screenRect = pygame.Rect(self.rect.x - camera.x, self.rect.y - camera.y, self.rect.width, self.rect.height)
+        if screenRect.collidepoint(mousepos / 2):
+            labelSurf.blit(self.renderedText, self.renderedText.get_rect(bottomright=mousepos))
+
+    def help(self):
+        printConsole("""Commandos can move along with this object.
+.activate(): will move to a designated area.
+.getType(): will display the axis that this object can move in.""")
+
+
+class Ship:
+    def __init__(self, pSpawn):
+        self.rect = pygame.Rect(pSpawn.x-32, pSpawn.y-8, 48, 36)
+        self.sprite = pygame.image.load(os.path.join("assets", "ship.png")).convert_alpha()
+
+    def update(self, dt, events):
+        pass
+
+    def draw(self, window, camera, mousepos, labelSurf):
+        window.blit(self.sprite, (self.rect.x - camera.x, self.rect.y - camera.y))
