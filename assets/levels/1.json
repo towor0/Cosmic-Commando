@@ -1,0 +1,38 @@
+{
+  "Player": {
+    "x": 0,
+    "y": 0
+  },
+  "Chunks": [
+    {
+      "x": -50,
+      "y": 100,
+      "row": 15,
+      "col": 5
+    },
+    {
+      "x": 300,
+      "y": 100,
+      "row": 10,
+      "col": 5
+    }
+  ],
+  "Interactables": {
+    "Pilars": [
+      {
+        "name": "P1",
+        "x": 150,
+        "y": 4
+      }
+    ],
+    "Gliders": [
+      {
+        "name": "P1",
+        "x": 190,
+        "y": 100,
+        "type": "horizontal"
+      }
+    ]
+  },
+  "Base": "moon"
+}
