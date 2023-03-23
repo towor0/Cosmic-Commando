@@ -8,14 +8,30 @@ import os
 
 class Controller:
     def __init__(self):
-        gamestate = 0
-        self.game = GameController()
+        self.gamestate = 0
+        self.game = GameController(1)
+        self.gameOverMenu = GameOverMenuController()
 
     def update(self, dt, events):
-        self.game.update(dt, events)
+        if self.gamestate == 0:
+            self.game.update(dt, events)
+        elif self.gamestate == 1:
+            self.gameOverMenu.update(dt, events)
+        if self.game.map.gameOver:
+            self.gamestate = 1
+            self.gameOverMenu.start()
+            self.game.map.gameOver = False
+            pygame.mixer.music.stop()
+        if self.gameOverMenu.restart:
+            self.gameOverMenu.restart = False
+            self.game = GameController(1)
+            self.gamestate = 0
 
     def draw(self, window):
-        self.game.draw(window)
+        if self.gamestate == 0:
+            self.game.draw(window)
+        if self.gamestate == 1:
+            self.gameOverMenu.draw(window)
 
 
 class MenuController:
@@ -29,10 +45,69 @@ class MenuController:
         pass
 
 
-class GameController:
+class GameOverMenuController:
     def __init__(self):
+        self.bg = pygame.transform.scale(
+            pygame.image.load(
+                os.path.join("assets", "backgrounds", "deathbackground.png")).convert_alpha(), (640, 480))
+        self.posy = 0
+        self.speed = 15
+        self.startdisplay = False
+        self.displayTimer = 0
+        self.strText = "CONNECTION LOST"
+        self.prev = ""
+        self.textFont = pygame.font.Font(os.path.join("assets", "Meyrin.ttf"), 80)
+        self.displayInterval = 5
+        self.renderedText = self.textFont.render("", True, (255, 255, 255))
+        self.strokeSound = pygame.mixer.Sound(os.path.join("assets", "key.wav"))
+        self.restartFont = pygame.font.SysFont("arial", 30)
+        self.restartFont.set_bold(True)
+        self.restartText = self.restartFont.render("PRESS ENTER TO RESTART", True, (255, 255, 255))
+        self.restartVisible = False
+        self.restartOp = 0
+        self.restart = False
+
+    def start(self):
+        self.displayTimer = 0
+        self.startdisplay = True
+        self.renderedText = self.textFont.render("", True, (255, 255, 255))
+        self.restartVisible = False
+        self.restartOp = 0
+        self.restartText.set_alpha(self.restartOp)
+
+    def update(self, dt, events):
+        self.posy = -(abs(self.posy - self.speed * dt) % 480)
+        if self.startdisplay:
+            self.displayTimer += dt
+            if self.displayTimer < (len(self.strText)+1) * self.displayInterval:
+                self.renderedText = self.textFont.render(
+                    self.strText[0:int(self.displayTimer/self.displayInterval)], True, (255, 255, 255))
+                if self.strText[0:int(self.displayTimer / self.displayInterval)] != self.prev:
+                    pygame.mixer.Channel(1).play(self.strokeSound)
+                self.prev = self.strText[0:int(self.displayTimer / self.displayInterval)]
+            else:
+                self.startdisplay = False
+                self.restartVisible = True
+        elif self.restartOp < 255:
+            self.restartOp += 10 * dt
+            self.restartText.set_alpha(self.restartOp)
+        for event in events["events"]:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    self.restart = True
+
+    def draw(self, window):
+        window.blit(self.bg, (0, self.posy))
+        window.blit(self.bg, (0, self.posy + 480))
+        window.blit(self.renderedText, self.renderedText.get_rect(center=(320, 200)))
+        if self.restartVisible:
+            window.blit(self.restartText, self.restartText.get_rect(center=(320, 270)))
+
+
+class GameController:
+    def __init__(self, level):
         self.map = Map()
-        self.map.load(1)
+        self.map.load(level)
         self.player = Player(self.map.playerSpawn)
         self.gameSurf = pygame.Surface((320, 240)).convert_alpha()
         self.consoleSurf = pygame.Surface((640, 480)).convert_alpha()
@@ -64,8 +139,8 @@ class GameController:
                     i += 1
                 r = self.map.findInteractable(codeName)
                 if r != -1:
-                    code = code[:code.find(codeName)-1] + str(r) + code[code.find(codeName) + len(codeName)+1:]
-                code = code[:code.find("Objects")] + "self.map.interactables"+ code[code.find("Objects")+7:]
+                    code = code[:code.find(codeName) - 1] + str(r) + code[code.find(codeName) + len(codeName) + 1:]
+                code = code[:code.find("Objects")] + "self.map.interactables" + code[code.find("Objects") + 7:]
         try:
             f = open("gameConsoleLog.txt", "w")
             f.close()

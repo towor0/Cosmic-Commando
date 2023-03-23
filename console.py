@@ -16,6 +16,7 @@ class Console:
         self.execute = False
         self.renderedCode = [self.consoleFont.render(self.code, True, (255, 255, 255))]
         self.renderedResult = []
+        self.strokeSound = pygame.mixer.Sound(os.path.join("assets", "consoleKey.wav"))
 
     def update(self, dt, events):
         self.rect.x, self.rect.y = self.pos
@@ -40,6 +41,8 @@ class Console:
                             self.execute = True
                         else:
                             self.code += event.unicode
+                            if event.unicode != "":
+                                pygame.mixer.Channel(1).play(self.strokeSound)
                         self.renderedCode = []
                         for i in range(int(len(self.code) / 38) + 1):
                             if i == int(len(self.code) / 38) + 1:
